@@ -1,15 +1,119 @@
-# openclaw-doctor
+---
+name: openclaw-doctor
+description: '自动修复 OpenClaw 配置错误的技能。用于：(1) 自动备份和恢复配置文件，(2) 检测并修复 Gateway 状态异常，(3) 心跳监控 OpenClaw 服务状态，(4) 生成故障报告。当用户提到 OpenClaw 配置出错、Gateway 启动失败、服务异常、自动修复时使用此技能。'
+metadata:
+  {
+    "openclaw":
+      {
+        "emoji": "🩺",
+        "requires": { "bins": ["openclaw"], "binsAny": ["python3", "python"] },
+        "install":
+          [
+            {
+              "id": "clone",
+              "kind": "git",
+              "url": "https://github.com/nidao003/openclaw-doctor-skills.git",
+              "label": "克隆 openclaw-doctor 技能",
+            },
+          ],
+      },
+  }
+---
 
-自动修复 OpenClaw 配置错误的技能。
+# OpenClaw Doctor 🩺
 
-## 功能
+自动修复 OpenClaw 配置错误的技能，确保 Gateway 服务稳定运行。
 
-### 1. 配置文件备份
-- 每天自动备份 `~/.openclaw/openclaw.json` 到 `~/.openclaw/backups/`
-- 备份文件名格式：`openclaw_config_YYYYMMDD_HHMMSS.json`
-- 自动清理 10 天前的旧备份
+## 功能特性
 
-### 2. 自动修复流程
+### 🔧 自动修复
+- 检查 Gateway 状态
+- 执行 `openclaw doctor --fix` 自动修复
+- 失败时自动恢复配置文件
+- 重启 Gateway 服务
+
+### 💾 配置文件备份
+- 每天自动备份 `~/.openclaw/openclaw.json`
+- 保留最近 10 天的备份
+- 支持手动备份
+
+### 📊 心跳监控（可选）
+- 每 60 秒检测 Gateway 状态
+- 连续 3 次失败自动触发修复
+
+### 📝 报告生成
+- 修复失败时自动生成 Markdown 报告
+- 包含日志、状态、检查结果
+
+## 安装
+
+### 方式一：克隆仓库
+
+```bash
+git clone https://github.com/nidao003/openclaw-doctor-skills.git ~/.openclaw/skills/openclaw-doctor
+```
+
+或使用 SSH：
+
+```bash
+git clone git@github.com:nidao003/openclaw-doctor-skills.git ~/.openclaw/skills/openclaw-doctor
+```
+
+### 方式二：使用 OpenClaw Skill 管理器
+
+```bash
+openclaw skill install openclaw-doctor
+```
+
+### 方式三：手动复制
+
+```bash
+# 克隆后复制到技能目录
+cp -r openclaw-doctor/ ~/.openclaw/skills/
+
+# 验证安装
+ls ~/.openclaw/skills/openclaw-doctor/
+```
+
+## 使用方法
+
+### 手动备份配置
+
+```bash
+python3 ~/.openclaw/skills/openclaw-doctor/backup.py
+```
+
+### 手动执行修复
+
+```bash
+python3 ~/.openclaw/skills/openclaw-doctor/fix.py
+```
+
+### 启动心跳监控（后台运行）
+
+```bash
+nohup python3 ~/.openclaw/skills/openclaw-doctor/monitor.py > /tmp/openclaw-monitor.log 2>&1 &
+echo $!  # 记录进程ID
+```
+
+### 停止心跳监控
+
+```bash
+# 查找进程
+ps aux | grep monitor.py
+
+# 终止进程
+kill <PID>
+```
+
+### 查看监控日志
+
+```bash
+tail -f /tmp/openclaw-monitor.log
+```
+
+## 自动修复流程
+
 ```
 1. 检查 Gateway 状态
    ↓
@@ -30,88 +134,65 @@
 9. 生成 MD 报告到桌面
 ```
 
-### 3. 心跳监控（可选）
-- 每 60 秒检查一次 Gateway 状态
-- 连续 3 次检测失败 → 触发自动修复
+## 定时任务
 
-## 文件结构
-```
-openclaw-doctor/
-├── SKILL.md      # 技能说明
-├── backup.py     # 配置文件备份
-├── fix.py        # 自动修复脚本
-├── monitor.py    # 心跳监控脚本
-└── report.py     # 失败报告生成
-```
+### 自动备份（每天凌晨2点）
 
-## 使用方法
-
-### 手动备份
 ```bash
-python3 ~/.openclaw/skills/openclaw-doctor/backup.py
+crontab -e
 ```
 
-### 手动修复
-```bash
-python3 ~/.openclaw/skills/openclaw-doctor/fix.py
+添加以下行：
+
+```
+0 2 * * * python3 ~/.openclaw/skills/openclaw-doctor/backup.py >> /tmp/openclaw-backup.log 2>&1
 ```
 
-### 启动心跳监控（后台）
+### 自动修复检查（每小时）
+
+```
+0 * * * * python3 ~/.openclaw/skills/openclaw-doctor/fix.py >> /tmp/openclaw-fix.log 2>&1
+```
+
+## 文件说明
+
+| 文件 | 说明 |
+|------|------|
+| `SKILL.md` | 技能元数据（安装、依赖、触发条件） |
+| `README.md` | 项目使用说明 |
+| `backup.py` | 配置文件备份脚本 |
+| `fix.py` | 自动修复脚本 |
+| `monitor.py` | 心跳监控脚本 |
+| `report.py` | 失败报告生成脚本 |
+
+## 输出日志
+
+- 备份日志：`/tmp/openclaw-backup.log`
+- 修复日志：`/tmp/openclaw-fix.log`
+- 监控日志：`/tmp/openclaw-monitor.log`
+- 失败报告：`~/Desktop/openclaw_fix_report_*.md`
+
+## 故障排除
+
+### 修复失败怎么办？
+
+1. 检查日志：`tail -f /tmp/openclaw-fix.log`
+2. 查看失败报告：`ls ~/Desktop/openclaw_fix_report_*.md`
+3. 手动检查状态：`openclaw status`
+4. 手动重启：`openclaw gateway restart`
+
+### 监控进程消失了？
+
 ```bash
+# 重新启动监控
 nohup python3 ~/.openclaw/skills/openclaw-doctor/monitor.py > /tmp/openclaw-monitor.log 2>&1 &
 ```
 
-### 设置定时任务
-```bash
-# 每天凌晨2点自动备份
-crontab -e
-0 2 * * * python3 ~/.openclaw/skills/openclaw-doctor/backup.py
-```
+## 相关链接
 
-## 业务流程图
+- GitHub 仓库：https://github.com/nidao003/openclaw-doctor-skills
+- OpenClaw 官网：https://docs.openclaw.ai
 
-```
-┌─────────────────────────────────────────────────────────────┐
-│                      修复流程                                │
-├─────────────────────────────────────────────────────────────┤
-│                                                             │
-│  ┌──────────┐    成功    ┌─────────────┐    成功           │
-│  │ 检查状态  │ ────────→ │doctor --fix │ ───────────────→  │
-│  └──────────┘            └─────────────┘                   │
-│      │                        │                            │
-│      │ 异常                   │ 失败                       │
-│      ↓                        ↓                            │
-│  ┌──────────┐            ┌─────────────┐                   │
-│  │ 开始修复 │            │ 恢复备份    │                   │
-│  └──────────┘            └─────────────┘                   │
-│                                │                            │
-│                                ↓                            │
-│                         ┌─────────────┐   成功              │
-│                         │doctor --fix │ ───────────────→    │
-│                         └─────────────┘                     │
-│                                │                            │
-│                                ↓                            │
-│                         ┌─────────────┐                     │
-│                         │  restart   │                     │
-│                         └─────────────┘                     │
-│                                │                            │
-│                                ↓                            │
-│                         ┌─────────────┐                     │
-│                         │ 检查日志    │                     │
-│                         └─────────────┘                     │
-│                                │                            │
-│                     ┌───────────┴───────────┐               │
-│                     ↓                       ↓               │
-│               正常/超时                   有错误            │
-│                     ↓                       ↓               │
-│               ┌─────────┐           ┌──────────┐           │
-│               │ ✅ 成功  │           │ 生成报告 │           │
-│               └─────────┘           └──────────┘           │
-│                                                             │
-└─────────────────────────────────────────────────────────────┘
-```
+## 许可证
 
-## 错误报告
-当修复失败时，会在桌面生成报告文件：
-- 文件名：`openclaw_fix_report_YYYYMMDD_HHMMSS.md`
-- 内容包含：doctor 输出、restart 输出、日志、状态检查结果
+MIT License
