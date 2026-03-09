@@ -138,6 +138,8 @@ def monitor():
     """心跳监控主循环"""
     setup_logging()
     failure_count = 0
+    cooldown_after_fix = 0  # 修复后的冷却期（跳过检查次数）
+    COOLDOWN_CHECKS = 5  # 修复后跳过 5 次检查（约5分钟）
     
     log("🔔 OpenClaw 心跳监控已启动")
     log(f"📅 启动时间: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}")
@@ -150,6 +152,13 @@ def monitor():
     
     while True:
         timestamp = datetime.now().strftime('%Y-%m-%d %H:%M:%S')
+        
+        # 修复冷却期：跳过检查，让 Gateway 有时间稳定
+        if cooldown_after_fix > 0:
+            cooldown_after_fix -= 1
+            log(f"⏳ 修复冷却期 ({cooldown_after_fix}/{COOLDOWN_CHECKS})，跳过检查")
+            time.sleep(CHECK_INTERVAL)
+            continue
         
         # 使用 HTTP 健康检查
         if check_gateway_health():
@@ -173,7 +182,8 @@ def monitor():
                 log(f"🔧 触发自动修复...")
                 if fix_and_restart():
                     failure_count = 0
-                    log(f"✅ 修复成功")
+                    cooldown_after_fix = COOLDOWN_CHECKS  # 设置修复冷却期
+                    log(f"✅ 修复成功，进入冷却期")
                 else:
                     log(f"⚠️ 自动修复失败，请检查报告")
         

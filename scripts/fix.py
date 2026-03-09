@@ -254,10 +254,10 @@ def fix_openclaw():
         # 2. 执行 gateway restart
         _, restart_output = restart_gateway()
         
-        # 3. 等待启动
+        # 3. 等待启动 - Gateway 启动需要较长时间
         print("⏳ 等待 Gateway 启动...")
         import time
-        time.sleep(5)
+        time.sleep(30)  # 等待 30 秒确保 Gateway 完全启动
         
         # 4. 检查日志
         log_output = check_logs()
