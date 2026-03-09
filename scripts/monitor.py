@@ -129,7 +129,7 @@ def fix_and_restart():
         if line:
             log(f"   {line}")
     
-    fix_script = os.path.expanduser("~/dsl/openclaw-doctor/scripts/fix.py")
+    fix_script = os.path.expanduser("~/.openclaw/workspace/skills/openclaw-doctor/scripts/fix.py")
     cmd = f"python3 {fix_script}"
     code, stdout, stderr = run_command(cmd, timeout=180)
     return code == 0
