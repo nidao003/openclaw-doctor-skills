@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """
-OpenClaw 心跳监控脚本
+OpenClaw 心跳监控脚本 (优化版)
 定时检查 Gateway 状态，异常时自动修复
 """
 
@@ -10,11 +10,24 @@ import time
 import subprocess
 import signal
 from datetime import datetime
+import urllib.request
+import json
 
 CHECK_INTERVAL = 60  # 检查间隔（秒）
 MAX_FAILURES = 3  # 连续失败次数阈值
 
-def run_command(cmd, timeout=15):
+def check_gateway_health():
+    """检查 Gateway 健康状态 - 使用 HTTP 请求"""
+    try:
+        req = urllib.request.Request("http://127.0.0.1:18789/health")
+        with urllib.request.urlopen(req, timeout=10) as response:
+            data = json.loads(response.read().decode())
+            return data.get("status") == "live"
+    except Exception as e:
+        print(f"健康检查失败: {e}")
+        return False
+
+def run_command(cmd, timeout=30):
     """执行命令并返回结果"""
     try:
         result = subprocess.run(
@@ -27,22 +40,13 @@ def run_command(cmd, timeout=15):
         )
         return result.returncode, result.stdout, result.stderr
     except subprocess.TimeoutExpired:
-        return -1, "", "Command timeout"
+        return -1, "Command timeout", "Command timeout"
     except Exception as e:
         return -1, "", str(e)
 
-def check_gateway():
-    """检查 Gateway 状态"""
-    cmd = "node /opt/homebrew/lib/node_modules/openclaw/openclaw.mjs status"
-    code, stdout, stderr = run_command(cmd, timeout=15)
-    
-    if code == 0 and "error" not in stderr.lower() and "Error" not in stderr:
-        return True
-    return False
-
 def fix_and_restart():
     """执行修复并重启"""
-    fix_script = os.path.expanduser("~/.openclaw/skills/openclaw-doctor/fix.py")
+    fix_script = os.path.expanduser("~/dsl/openclaw-doctor/scripts/fix.py")
     cmd = f"python3 {fix_script}"
     code, stdout, stderr = run_command(cmd, timeout=180)
     return code == 0
@@ -59,11 +63,13 @@ def monitor():
         while True:
             timestamp = datetime.now().strftime('%Y-%m-%d %H:%M:%S')
             
-            if check_gateway():
+            # 使用 HTTP 健康检查
+            if check_gateway_health():
                 if failure_count > 0:
                     print(f"[{timestamp}] ✅ Gateway 状态恢复正常")
                     failure_count = 0
-                else:
+                # 每5次正常才打印，避免刷屏
+                elif failure_count == 0:
                     print(f"[{timestamp}] ✅ Gateway 状态正常")
             else:
                 failure_count += 1
@@ -73,8 +79,9 @@ def monitor():
                     print(f"🔧 触发自动修复...")
                     if fix_and_restart():
                         failure_count = 0
+                        print(f"[{timestamp}] ✅ 修复成功")
                     else:
-                        print("⚠️ 自动修复失败，请检查报告")
+                        print(f"⚠️ 自动修复失败，请检查报告")
             
             time.sleep(CHECK_INTERVAL)
             
@@ -84,17 +91,20 @@ def monitor():
 
 if __name__ == "__main__":
     # 检查是否已有监控进程运行
-    import psutil
-    
-    current_pid = os.getpid()
-    for proc in psutil.process_iter(['pid', 'name', 'cmdline']):
-        try:
-            if proc.info['pid'] != current_pid and proc.info['cmdline']:
-                cmdline = ' '.join(proc.info['cmdline'])
-                if 'openclaw-doctor/monitor.py' in cmdline:
-                    print("⚠️ 监控进程已在运行中")
-                    sys.exit(0)
-        except (psutil.NoSuchProcess, psutil.AccessDenied):
-            pass
+    try:
+        import psutil
+        
+        current_pid = os.getpid()
+        for proc in psutil.process_iter(['pid', 'name', 'cmdline']):
+            try:
+                if proc.info['pid'] != current_pid and proc.info['cmdline']:
+                    cmdline = ' '.join(proc.info['cmdline'])
+                    if 'openclaw-doctor/monitor.py' in cmdline:
+                        print("⚠️ 监控进程已在运行中")
+                        sys.exit(0)
+            except (psutil.NoSuchProcess, psutil.AccessDenied):
+                pass
+    except ImportError:
+        pass
     
     monitor()
