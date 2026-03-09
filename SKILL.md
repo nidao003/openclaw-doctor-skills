@@ -6,7 +6,7 @@ metadata:
     "openclaw":
       {
         "emoji": "🩺",
-        "requires": { "bins": ["openclaw"], "anyBins": ["python3", "python"] },
+        "requires": { "bins": ["openclaw"], "anyBins": ["python3 >= 3.10"] },
         "install":
           [
             {
@@ -23,6 +23,30 @@ metadata:
 # OpenClaw Doctor 🩺
 
 自动修复 OpenClaw 配置错误的技能。
+
+## ⚠️ 重要要求
+
+### Python 版本要求
+- **最低版本**: Python 3.10
+- **推荐版本**: Python 3.12+
+- **必须使用单一版本**: 禁止多版本同时运行
+
+### 启动命令
+```bash
+# 使用绝对路径启动，确保单一版本
+/opt/homebrew/bin/python3 ~/.openclaw/skills/openclaw-doctor/scripts/monitor.py
+
+# 或指定版本
+python3.12 ~/.openclaw/skills/openclaw-doctor/scripts/monitor.py
+```
+
+### 禁止多版本运行
+```bash
+# 启动前检查并清理旧进程
+pkill -f monitor.py
+sleep 1
+nohup /opt/homebrew/bin/python3 -u ~/.openclaw/skills/openclaw-doctor/scripts/monitor.py > ~/.openclaw/logs/openclaw-monitor.log 2>&1 &
+```
 
 ## 快速使用
 
@@ -64,5 +88,5 @@ crontab -e
 
 - 备份：`/tmp/openclaw-backup.log`
 - 修复：`/tmp/openclaw-fix.log`
-- 监控：`/tmp/openclaw-monitor.log`
+- 监控：`~/.openclaw/logs/openclaw-monitor.log` (保留3天)
 - 报告：`~/Desktop/openclaw_fix_report_*.md`
