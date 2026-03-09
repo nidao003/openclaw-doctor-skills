@@ -13,6 +13,7 @@ import shutil
 from datetime import datetime, timedelta
 import urllib.request
 import json
+import subprocess
 
 # 强制输出刷新
 sys.stdout.reconfigure(line_buffering=True)
@@ -44,7 +45,7 @@ def rotate_logs():
         
         # 清空主日志
         open(LOG_FILE, 'w').close()
-        print(f"📦 日志已归档: {archived}", flush=True)
+        log(f"📦 日志已归档: {archived}")
     
     # 删除过期日志
     cutoff = datetime.now() - timedelta(days=MAX_DAYS)
@@ -57,21 +58,40 @@ def rotate_logs():
                 mtime = datetime.fromtimestamp(os.path.getmtime(fpath))
                 if mtime < cutoff:
                     os.remove(fpath)
-                    print(f"🗑️ 删除过期日志: {f}", flush=True)
+                    log(f"🗑️ 删除过期日志: {f}")
             except:
                 pass
 
 def log(msg):
     """写入日志"""
     timestamp = datetime.now().strftime('%Y-%m-%d %H:%M:%S')
-    line = f"[{timestamp}] {msg}\n"
+    line = f"[{timestamp}] {msg}"
     
     # 写入文件
     with open(LOG_FILE, 'a') as f:
-        f.write(line)
+        f.write(line + "\n")
     
     # 打印到控制台
-    print(line.strip(), flush=True)
+    print(line, flush=True)
+
+def get_gateway_error_logs(lines=20):
+    """获取 Gateway 错误日志"""
+    gateway_log = os.path.expanduser("~/.openclaw/logs/gateway.log")
+    if not os.path.exists(gateway_log):
+        return "Gateway 日志文件不存在"
+    
+    try:
+        # 读取最后几行错误日志
+        result = subprocess.run(
+            f"tail -n {lines} {gateway_log} | grep -i 'error\\|fail\\|crash' | tail -10",
+            shell=True,
+            capture_output=True,
+            text=True,
+            timeout=10
+        )
+        return result.stdout if result.stdout else "无错误日志"
+    except Exception as e:
+        return f"读取失败: {e}"
 
 def check_gateway_health():
     """检查 Gateway 健康状态"""
@@ -103,6 +123,12 @@ def run_command(cmd, timeout=30):
 
 def fix_and_restart():
     """执行修复并重启"""
+    log("📋 记录当前 Gateway 错误日志:")
+    error_logs = get_gateway_error_logs(30)
+    for line in error_logs.strip().split('\n'):
+        if line:
+            log(f"   {line}")
+    
     fix_script = os.path.expanduser("~/dsl/openclaw-doctor/scripts/fix.py")
     cmd = f"python3 {fix_script}"
     code, stdout, stderr = run_command(cmd, timeout=180)
@@ -135,6 +161,13 @@ def monitor():
         else:
             failure_count += 1
             log(f"❌ Gateway 异常 (连续失败: {failure_count}/{MAX_FAILURES})")
+            
+            # 记录错误日志
+            log("📋 Gateway 错误日志:")
+            error_logs = get_gateway_error_logs(20)
+            for line in error_logs.strip().split('\n'):
+                if line:
+                    log(f"   {line}")
             
             if failure_count >= MAX_FAILURES:
                 log(f"🔧 触发自动修复...")
