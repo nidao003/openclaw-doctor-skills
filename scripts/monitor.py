@@ -95,13 +95,28 @@ def get_gateway_error_logs(lines=20):
 
 def check_gateway_health():
     """检查 Gateway 健康状态"""
+    # 先检查 Gateway 进程是否存在
+    proc_check_cmd = "ps aux | grep 'openclaw-gateway' | grep -v grep"
+    proc_result = subprocess.run(proc_check_cmd, shell=True, capture_output=True, text=True)
+    
+    # 记录进程状态
+    if proc_result.stdout:
+        # 提取 PID 和内存信息
+        lines = proc_result.stdout.strip().split('\n')
+        for line in lines:
+            log(f"   进程: {line[:100]}")  # 记录进程详情
+    else:
+        log("   ⚠️ 未找到 openclaw-gateway 进程")
+    
     try:
         req = urllib.request.Request("http://127.0.0.1:18789/health")
         with urllib.request.urlopen(req, timeout=5) as response:
             data = json.loads(response.read().decode())
-            return data.get("status") == "live"
+            status = data.get("status")
+            log(f"   HTTP 状态: {status}")
+            return status == "live"
     except Exception as e:
-        log(f"健康检查失败: {e}")
+        log(f"   HTTP 检查失败: {e}")
         return False
 
 def run_command(cmd, timeout=30):

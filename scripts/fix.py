@@ -147,6 +147,27 @@ def check_logs():
     
     return output
 
+def get_system_info():
+    """获取系统状态信息用于调试"""
+    info = []
+    
+    # Gateway 进程状态
+    cmd = "ps aux | grep 'openclaw' | grep -v grep"
+    code, stdout, stderr = run_command(cmd, timeout=5)
+    info.append(f"=== OpenClaw 进程 ===\n{stdout[:500]}")
+    
+    # Gateway launchd 状态
+    cmd = "launchctl list | grep openclaw"
+    code, stdout, stderr = run_command(cmd, timeout=5)
+    info.append(f"=== launchctl 状态 ===\n{stdout}")
+    
+    # 端口占用
+    cmd = "lsof -i :18789"
+    code, stdout, stderr = run_command(cmd, timeout=5)
+    info.append(f"=== 端口 18789 ===\n{stdout}")
+    
+    return "\n".join(info)
+
 def check_gateway_status():
     """检查 Gateway 状态"""
     print("🔍 检查 Gateway 状态...")
@@ -171,6 +192,9 @@ def check_gateway_status():
 
 def generate_report(attempt, doctor_output, restart_output, log_output, status_output):
     """生成失败报告"""
+    # 获取系统状态信息
+    system_info = get_system_info()
+    
     report_file = os.path.join(DESKTOP, f"openclaw_fix_report_{datetime.now().strftime('%Y%m%d_%H%M%S')}.md")
     
     content = f"""# OpenClaw 自动修复报告
@@ -180,6 +204,13 @@ def generate_report(attempt, doctor_output, restart_output, log_output, status_o
 
 ## 修复尝试次数
 {attempt}
+
+---
+
+## 📋 系统状态信息
+```
+{system_info[:3000]}
+```
 
 ---
 
