@@ -115,8 +115,16 @@ def restart_gateway():
     output = stdout + "\n" + stderr
     
     if code == -1 and output == "Command timeout":
-        print("⏳ gateway restart 执行超时（可能正常运行中）")
-        return True, output
+        print("⏳ gateway restart 执行超时，验证实际状态...")
+        # 超时时应该验证实际状态，而不是假设成功
+        status_cmd = f"{OPENCLAW_BIN} gateway status 2>&1"
+        status_code, status_out, _ = run_command(status_cmd, timeout=10)
+        if status_code == 0 and "running" in status_out.lower():
+            print("✅ Gateway 已在运行")
+            return True, "Gateway already running"
+        else:
+            print("❌ Gateway 未启动，超时后仍无法连接")
+            return False, "Gateway timeout and not running"
     
     if has_real_error(output):
         print(f"⚠️ Gateway 重启可能有警告: {output[:150]}")
