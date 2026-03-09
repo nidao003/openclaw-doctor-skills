@@ -18,7 +18,7 @@ import subprocess
 # 强制输出刷新
 sys.stdout.reconfigure(line_buffering=True)
 
-CHECK_INTERVAL = 60  # 检查间隔（秒）
+CHECK_INTERVAL = 300  # 检查间隔（5分钟）
 MAX_FAILURES = 3    # 连续失败次数阈值
 LOG_DIR = os.path.expanduser("~/.openclaw/logs")
 LOG_FILE = os.path.join(LOG_DIR, "openclaw-monitor.log")
@@ -139,7 +139,7 @@ def monitor():
     setup_logging()
     failure_count = 0
     cooldown_after_fix = 0  # 修复后的冷却期（跳过检查次数）
-    COOLDOWN_CHECKS = 5  # 修复后跳过 5 次检查（约5分钟）
+    COOLDOWN_CHECKS = 1  # 修复后跳过 1 次检查（5分钟）
     
     log("🔔 OpenClaw 心跳监控已启动")
     log(f"📅 启动时间: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}")
