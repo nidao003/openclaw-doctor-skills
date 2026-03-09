@@ -1,10 +1,10 @@
 # OpenClaw Doctor
 
-自动修复 OpenClaw 配置错误的工具，确保 Gateway 服务稳定运行。
+自动修复 OpenClaw 配置错误的技能，确保 Gateway 服务稳定运行。
 
 ## 概述
 
-OpenClaw Doctor 是一个用于监控和自动修复 OpenClaw 配置问题的工具。它能够：
+OpenClaw Doctor 是一个 OpenClaw 技能（Skill），用于监控和自动修复 OpenClaw 配置问题。它能够：
 - 自动备份配置文件
 - 检测 Gateway 状态异常
 - 自动执行修复流程
@@ -33,16 +33,30 @@ OpenClaw Doctor 是一个用于监控和自动修复 OpenClaw 配置问题的工
 
 ## 安装
 
+OpenClaw Doctor 已发布到 [GitHub](https://github.com/nidao003/openclaw-doctor-skills)，可通过以下方式安装：
+
 ### 方式一：克隆仓库
 
 ```bash
-git clone git@github.com:nidao003/openclaw-doctor.git ~/.openclaw/skills/openclaw-doctor
+git clone https://github.com/nidao003/openclaw-doctor-skills.git ~/.openclaw/skills/openclaw-doctor
 ```
 
-### 方式二：手动复制
+或使用 SSH：
 
 ```bash
-# 复制文件
+git clone git@github.com:nidao003/openclaw-doctor-skills.git ~/.openclaw/skills/openclaw-doctor
+```
+
+### 方式二：使用 OpenClaw Skill 管理器
+
+```bash
+openclaw skill install openclaw-doctor
+```
+
+### 方式三：手动复制
+
+```bash
+# 克隆后复制到技能目录
 cp -r openclaw-doctor/ ~/.openclaw/skills/
 
 # 验证安装
@@ -110,11 +124,11 @@ crontab -e
 
 | 文件 | 说明 |
 |------|------|
+| `SKILL.md` | 技能详细说明（OpenClaw 技能元数据） |
 | `backup.py` | 配置文件备份脚本 |
 | `fix.py` | 自动修复脚本 |
 | `monitor.py` | 心跳监控脚本 |
 | `report.py` | 失败报告生成脚本 |
-| `SKILL.md` | 技能详细说明 |
 
 ## 输出日志
 
@@ -128,6 +142,11 @@ crontab -e
 - Python 3.7+
 - OpenClaw 已安装并配置
 - `openclaw` 命令行工具
+
+## 相关链接
+
+- GitHub 仓库：https://github.com/nidao003/openclaw-doctor-skills
+- OpenClaw 官网：https://docs.openclaw.ai
 
 ## 许可证
 
