@@ -146,7 +146,7 @@ def fix_and_restart():
     
     fix_script = os.path.expanduser("~/.openclaw/workspace/skills/openclaw-doctor/scripts/fix.py")
     cmd = f"python3 {fix_script}"
-    code, stdout, stderr = run_command(cmd, timeout=180)
+    code, stdout, stderr = run_command(cmd, timeout=400)
     return code == 0
 
 def monitor():

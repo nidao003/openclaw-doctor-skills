@@ -258,12 +258,20 @@ def generate_report(attempt, doctor_output, restart_output, log_output, status_o
     return report_file
 
 def fix_openclaw():
-    """修复 OpenClaw"""
-    print(f"🚀 开始修复 OpenClaw (最多 {MAX_RETRIES} 次)...")
+    """
+    使用指数退避策略修复 OpenClaw
+    - 第1次: 修复后等待1分钟检查
+    - 第2次: 修复后等待2分钟检查
+    - 第3次: 修复后等待3分钟检查
+    - 失败3次后记录日志到桌面，停止
+    """
+    wait_times = [60, 120, 180]  # 1分钟, 2分钟, 3分钟
+    
+    print(f"🚀 开始修复 OpenClaw (指数退避策略)...")
     
     for attempt in range(1, MAX_RETRIES + 1):
         print(f"\n{'='*50}")
-        print(f"📌 第 {attempt}/{MAX_RETRIES} 次尝试")
+        print(f"📌 第 {attempt}/{MAX_RETRIES} 次尝试 (等待 {wait_times[attempt-1]//60} 分钟)")
         print('='*50)
         
         # 1. 执行 doctor --fix
@@ -285,10 +293,11 @@ def fix_openclaw():
         # 2. 执行 gateway restart
         _, restart_output = restart_gateway()
         
-        # 3. 等待启动 - Gateway 启动需要较长时间
-        print("⏳ 等待 Gateway 启动...")
+        # 3. 指数退避等待
+        wait_time = wait_times[attempt - 1]
+        print(f"⏳ 等待 {wait_time//60} 分钟让 Gateway 完全启动...")
         import time
-        time.sleep(30)  # 等待 30 秒确保 Gateway 完全启动
+        time.sleep(wait_time)
         
         # 4. 检查日志
         log_output = check_logs()
@@ -300,10 +309,14 @@ def fix_openclaw():
             print("🎉 修复成功！OpenClaw 已恢复正常")
             return True
         
-        print("❌ 修复后状态仍异常，生成报告...")
-        generate_report(attempt, doctor_output, restart_output, log_output, status_output)
+        print(f"❌ 第 {attempt} 次修复后状态仍异常")
+        
+        # 第3次失败后记录日志并停止
+        if attempt >= MAX_RETRIES:
+            print("⚠️ 已达最大重试次数，生成失败报告...")
+            generate_report(attempt, doctor_output, restart_output, log_output, status_output)
+            return False
     
-    print(f"⚠️ 经过 {MAX_RETRIES} 次修复尝试后，OpenClaw 仍然异常")
     return False
 
 if __name__ == "__main__":
